@@ -1,5 +1,5 @@
 CROSS_COMPILE ?= 
-CC := $(CROSS_COMPILE)gcc
+CC := $(CROSS_COMPILE)g++
 STRIP := $(CROSS_COMPILE)strip
 AR := $(CROSS_COMPILE)ar
 CFLAGS += -g -Wall

@@ -6,7 +6,7 @@
     支持单一右边所有字符,支持两种格式一种是带引号和不带引号的key
     
 # build
-    git clone https://github.com/niuyuling/libini
+    git clone https://github.com/hydropek/libini
     cd libini
     make
 
