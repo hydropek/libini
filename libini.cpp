@@ -1,9 +1,7 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 #include "libini.h"
-
-#define BUFFER_SIZE 1024
 
 // 去除str前的"和后的";
 char *delchar(char *str, char *temp)
@@ -26,7 +24,7 @@ char *del_space(char *str, char *buf)
     unsigned int uLen = strlen(str);
 
     if (0 == uLen) {
-        return '\0';
+        return (char*)"\0";
     }
 
     memset(buf, 0, uLen + 1);
@@ -63,19 +61,22 @@ void libini_free(char *p)
     }
 }
 
-int getinikeystring(char *title, char *key, char *filename, char *buf)
+int getinikeystring(const char *title, const char *key, const char *filename, char *buf)
 {
-    bzero(buf, 0);
+    *buf = 0;
     FILE *fp;
     int flag = 0;
     char sTitle[BUFFER_SIZE], *wTmp;
-    char sLine[BUFFER_SIZE];
+    char sLine[BUFFER_SIZE], sSection[BUFFER_SIZE] = "[]";
     sprintf(sTitle, "[%s]", title);
     char buf1[BUFFER_SIZE];
 
     if (NULL == (fp = fopen(filename, "r"))) {
         perror("fopen");
         return -1;
+    }
+    if (0 == strncmp(sTitle, sSection, strlen(sTitle))) {
+        flag = 1;
     }
     while (NULL != fgets(sLine, BUFFER_SIZE, fp)) {
         if (0 == strncmp("//", sLine, 2))
@@ -101,8 +102,13 @@ int getinikeystring(char *title, char *key, char *filename, char *buf)
                 return 0;
             }
         } else {
-            if (0 == strncmp(sTitle, sLine, strlen(sTitle))) {
-                flag = 1;
+            if (sLine[0] == '[') {
+                strncpy(sSection, sLine, strlen(sLine));
+                if (0 == strncmp(sTitle, sSection, strlen(sTitle))) {
+                    flag = 1;
+                } else {
+                    flag = 0;
+                }
             }
         }
     }
@@ -110,20 +116,32 @@ int getinikeystring(char *title, char *key, char *filename, char *buf)
     return -1;
 }
 
-int putinikeystring(char *title, char *key, char *val, char *filename)
+int putinikeystring(const char *title, const char *key, const char *val, const char *filename)
 {
     char buf[BUFFER_SIZE];
     FILE *fpr;
     FILE *fpw;
     int flag = 0;
-    char sLine[BUFFER_SIZE], sTitle[BUFFER_SIZE], *wTmp;
-    char sLine_backup[BUFFER_SIZE];
+    char sFull[BUFFER_SIZE], sTitle[BUFFER_SIZE];
+    char sSection[BUFFER_SIZE] = "[]";
+    char sLine[BUFFER_SIZE], sLine_backup[BUFFER_SIZE], *wTmp;
     sprintf(sTitle, "[%s]", title);
-    if (NULL == (fpr = fopen(filename, "r")))
-        return -1;
+    sprintf(sFull, "%s = %s\n", key, val);
     sprintf(sLine, "%s.tmp", filename);
-    if (NULL == (fpw = fopen(sLine, "w")))
-        return -1;
+    if (NULL == (fpr = fopen(filename, "r"))) {
+    	fpr = fopen(filename, "w");
+    	fclose(fpr);
+    	fpr = fopen(filename, "r");
+	} else {
+        fclose(fpr);
+        rename(filename, sLine);
+        fpr = fopen(sLine, "r");
+    }
+    if (NULL == (fpw = fopen(filename, "w")))
+        return -2;
+    if (0 == strncmp(sTitle, sSection, strlen(sTitle))) {
+        flag = 1;
+    }
     while (NULL != fgets(sLine, BUFFER_SIZE, fpr)) {
         if (2 != flag) {
             wTmp = strchr(sLine, '=');
@@ -135,37 +153,56 @@ int putinikeystring(char *title, char *key, char *val, char *filename)
                       (del_space(strtok(sLine_backup, "="), buf), key,
                        strlen(del_space(strtok(sLine_backup, "="), buf))))) {
                     flag = 2;
-                    sprintf(wTmp + 1, "%s\n", val);
+                    sprintf(wTmp + 1, " %s\n", val);
                 }
             } else {
-                if (0 == strncmp(sTitle, sLine, strlen(sTitle))) {
-                    flag = 1;
+                if (sLine[0] == '[') {
+                    strncpy(sSection, sLine, strlen(sLine));
+                    if (0 == strncmp(sTitle, sSection, strlen(sTitle))) {
+                        flag = 1;
+                    } else {
+                        if (1 == flag) {
+                            fputs(sFull, fpw);
+                            flag = 2;
+                        }
+                    }
                 }
             }
         }
         fputs(sLine, fpw);
     }
+    if (!flag) {
+        if (strcmp(sSection, "[]") == 0)
+    	    sprintf(sTitle, "[%s]\n", title);
+        else
+    	    sprintf(sTitle, "\n[%s]\n", title);
+    	fputs(sTitle, fpw);
+    	fputs(sFull, fpw);
+	}
+    if (flag == 1) {
+        fputs(sFull, fpw);
+    }
     fclose(fpr);
     fclose(fpw);
     sprintf(sLine, "%s.tmp", filename);
-    return rename(sLine, filename);
+    return remove(sLine);
 }
 
-int getinikeyint(char *title, char *key, char *filename)
+int getinikeyint(const char *title, const char *key, const char *filename)
 {
     char buf[BUFFER_SIZE];
     getinikeystring(title, key, filename, buf);
     return atoi(buf);
 }
 
-long int getinikeylong(char *title, char *key, char *filename)
+long long getinikeylong(const char *title, const char *key, const char *filename)
 {
     char buf[BUFFER_SIZE];
     getinikeystring(title, key, filename, buf);
-    return atol(buf);
+    return atoll(buf);
 }
 
-float getinikeyfloat(char *title, char *key, char *filename)
+double getinikeyfloat(const char *title, const char *key, const char *filename)
 {
     char buf[BUFFER_SIZE];
     getinikeystring(title, key, filename, buf);
