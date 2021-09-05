@@ -5,11 +5,8 @@
     支持等号右有若干空格.
     支持单一右边所有字符,支持两种格式一种是带引号和不带引号的key
     
-# build
+## build
     git clone https://github.com/hydropek/libini
     cd libini
     make
 
-# test
-    gcc -Wall test.c -o test -L./ -lini -static
-    ./test
